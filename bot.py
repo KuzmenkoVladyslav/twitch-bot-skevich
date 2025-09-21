@@ -114,7 +114,7 @@ def ask_groq(question):
         "max_tokens": 80,
         "temperature": 0.7,
         "top_p": 0.9,
-        "stop": ["<think>", "<reasoning>", "Okay", "Wait", "First", "\n\n"],
+        "stop": ["<think>", "<reasoning>", "Okay"],
         "frequency_penalty": 0.5
     }
     
