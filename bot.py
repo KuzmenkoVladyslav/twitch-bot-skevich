@@ -94,7 +94,7 @@ def ask_groq(question):
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "mistral-saba-24b",
+        "model": "qwen/qwen3-32b",
         "messages": [
             {
                 "role": "system", 
