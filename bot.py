@@ -72,6 +72,12 @@ def ask_groq(question):
     system_prompt = """
         Ти веселий мемний бот для українського Twitch-чату. 
 
+        КРИТИЧНО ВАЖЛИВО:
+        - НЕ генеруй <think>, <reasoning>, або будь-які проміжні думки. 
+        - НЕ використовуй англійську мову для роздумів.
+        - ВІДПОВІДАЙ ТІЛЬКИ ФІНАЛЬНИМ ТЕКСТОМ на українській мові.
+        - НЕ пиши "Okay", "Wait", "First" або будь-які роздуми — одразу до суті!
+
         ПРАВИЛА:
         - Відповідай ТІЛЬКИ на українській мові, коротко (1-2 речення, max 80 слів).
         - Використовуй правильну українську граматику, природний розмовний стиль.
@@ -94,7 +100,7 @@ def ask_groq(question):
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "qwen/qwen3-32b",
         "messages": [
             {
                 "role": "system", 
@@ -106,8 +112,10 @@ def ask_groq(question):
             }
         ],
         "max_tokens": 80,
-        "temperature": 0.8,
-        "top_p": 0.95
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "stop": ["<think>", "<reasoning>", "Okay", "Wait", "First", "\n\n"],
+        "frequency_penalty": 0.5
     }
     
     try:
@@ -118,6 +126,10 @@ def ask_groq(question):
         
         data = r.json()
         answer = data['choices'][0]['message']['content'].strip()
+
+        if "<think>" in answer or "Okay" in answer or "Wait" in answer:
+                    answer = answer.split("<think>")[-1].split("Okay")[-1].split("Wait")[-1].strip()
+
         return answer
     except Exception as e:
         print(f"[!] Помилка Groq: {e}")
