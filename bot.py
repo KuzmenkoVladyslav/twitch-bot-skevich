@@ -4,9 +4,6 @@ import random
 import os
 
 from dotenv import load_dotenv
-from keep_alive import keep_alive
-
-keep_alive()
 
 load_dotenv()
 
@@ -38,6 +35,7 @@ print("Бот запущений, чекаємо повідомлень...")
 
 def send_message(nick, msg):
     msg = f'@{nick} {msg}'
+    print(f'Message {msg} was sent')
     sock.send(f"PRIVMSG {channel} :{msg}\r\n".encode('utf-8'))
 
 def get_weather(city):
