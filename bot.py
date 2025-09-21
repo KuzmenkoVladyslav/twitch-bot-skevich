@@ -37,17 +37,16 @@ def connect_to_twitch():
             print("Успішно підключено до Twitch IRC")
             return sock
         except Exception as e:
-            print(f"Помилка підключення: {e}, повтор через 10 секунд")
+            print(f"[!] Помилка підключення: {e}. Повтор через 10 секунд")
             time.sleep(10)
 
 def send_message(sock, nick, msg):
     try:
-        msg_full = f'@{nick} {msg}'
+        msg_full = f"@{nick} {msg}"
         sock.send(f"PRIVMSG {channel} :{msg_full}\r\n".encode('utf-8'))
-        print(f"Відправлено повідомлення: {msg_full}")
+        print(f"[=>] Відправлено повідомлення: {msg_full}")
     except Exception as e:
-        print(f"Помилка відправки повідомлення: {e}")
-
+        print(f"[!] Помилка відправки повідомлення: {e}")
 
 def get_weather(city):
     url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_API_KEY}&units=metric&lang=uk"
@@ -60,9 +59,8 @@ def get_weather(city):
         desc = data['weather'][0]['description']
         return f"У {city.title()} зараз {temp}°C, {desc}"
     except Exception as e:
-        print(f"Помилка при отриманні погоди: {e}")
+        print(f"[!] Помилка при отриманні погоди: {e}")
         return None
-
 
 def get_crypto_rate(symbol):
     symbol = symbol.lower()
@@ -76,9 +74,8 @@ def get_crypto_rate(symbol):
         price = data[crypto_id]['usd']
         return f"Курс {symbol.upper()} зараз {price} $"
     except Exception as e:
-        print(f"Помилка при отриманні курсу: {e}")
+        print(f"[!] Помилка при отриманні курсу крипти: {e}")
         return None
-
 
 def get_currency_rate(currency):
     url = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json"
@@ -91,9 +88,8 @@ def get_currency_rate(currency):
                 return f"Сьогодні курс {currency} = {item['rate']} грн"
         return f"Не знайдено валюту {currency}"
     except Exception as e:
-        print(f"Помилка при отриманні курсу: {e}")
+        print(f"[!] Помилка при отриманні курсу валют: {e}")
         return None
-
 
 def define_nick_rule(nick):
     nicks_dict = {
@@ -101,7 +97,6 @@ def define_nick_rule(nick):
         'fazzlk': 'Banana'
     }
     return nicks_dict.get(nick)
-
 
 def skelya_description(skelya_size):
     if skelya_size < 4:
@@ -113,22 +108,16 @@ def skelya_description(skelya_size):
     else:
         return "напиши мені в інстраграмі, аккаунт skevichh NOTED"
 
-
 def get_skelya_size(nick):
     rule = define_nick_rule(nick)
-    text = 'розмір твоєї скелі '
-    skelya_size = 0
     if not rule:
         skelya_size = random.randint(1, 20)
-        text += f'{skelya_size} см, {skelya_description(skelya_size)}'
-    else:
-        if rule == 'Short':
-            skelya_size = random.randint(1, 4)
-            text += f'{skelya_size} см, {skelya_description(skelya_size)}'
-        elif rule == 'Banana':
-            text = 'уууу ааа ауаууа у 2-3  🍌  🍌  🍌 '
-    return text
-
+        return f"розмір твоєї скелі {skelya_size} см, {skelya_description(skelya_size)}"
+    elif rule == 'Short':
+        skelya_size = random.randint(1, 4)
+        return f"розмір твоєї скелі {skelya_size} см, {skelya_description(skelya_size)}"
+    elif rule == 'Banana':
+        return 'уууу ааа ауаууа у 2-3  🍌  🍌  🍌 '
 
 # ------------------- Основний цикл -------------------
 
@@ -138,8 +127,10 @@ print("Бот запущений, чекаємо повідомлень...")
 while True:
     try:
         resp = sock.recv(4096).decode('utf-8', errors='ignore')
+        if not resp:
+            raise Exception("Отримано пустий пакет, перепідключення...")
     except Exception as e:
-        print(f"Помилка recv(): {e}. Перепідключення...")
+        print(f"[!] Помилка recv(): {e}")
         sock.close()
         sock = connect_to_twitch()
         continue
@@ -152,9 +143,9 @@ while True:
         if line.startswith('PING'):
             try:
                 sock.send("PONG :tmi.twitch.tv\r\n".encode('utf-8'))
-                print("Відправлено PONG")
+                print("[<=>] Відправлено PONG")
             except Exception as e:
-                print(f"Помилка PONG: {e}")
+                print(f"[!] Помилка PONG: {e}")
             continue
 
         # Приватні повідомлення
@@ -162,44 +153,34 @@ while True:
             try:
                 nick = line.split("!")[0][1:]
                 text = line.split(":", 2)[2].strip()
-                print(f"Отримано повідомлення від {nick}: {text}")
+                print(f"[<=] Отримано повідомлення від {nick}: {text}")
             except Exception as e:
-                print(f"Помилка обробки повідомлення: {e}")
+                print(f"[!] Помилка обробки повідомлення: {e}")
                 continue
 
             # Команди
             if text.strip() == "!білд":
-                reply = "БІЛД НА ЕЛДЕН РІНГ - максимо віру 1 до 2, тобто, я можу мати 30 віри, тільки після цього можу качнути будь який інший стат до 15. ЗБРОЯ БУДЬ ЯКА ЩО МАЄ В СОБІ СКЕЙЛ ВІРИ. АРМОР БУДЬ ЯКИЙ"
+                reply = "БІЛД НА ЕЛДЕН РІНГ - максимо віру 1 до 2..."
                 send_message(sock, nick, reply)
-
             elif text.strip() == "!скеля":
-                reply = get_skelya_size(nick)
-                send_message(sock, nick, reply)
-
+                send_message(sock, nick, get_skelya_size(nick))
             elif text.strip() == "!дедлок":
-                reply = "дедлок? ахах, я думав ця гра вже давно здохла LOLOL"
-                send_message(sock, nick, reply)
-
+                send_message(sock, nick, "дедлок? ахах, я думав ця гра вже давно здохла LOLOL")
             elif text.startswith("!погода"):
                 parts = text.split(maxsplit=1)
                 if len(parts) == 2:
-                    city = parts[1]
-                    reply = get_weather(city)
+                    reply = get_weather(parts[1])
                     if reply:
                         send_message(sock, nick, reply)
-
             elif text.startswith("!курс_крипти"):
                 parts = text.split(maxsplit=1)
                 if len(parts) == 2:
-                    crypto = parts[1]
-                    reply = get_crypto_rate(crypto)
+                    reply = get_crypto_rate(parts[1])
                     if reply:
                         send_message(sock, nick, reply)
-
             elif text.startswith("!курс"):
                 parts = text.split(maxsplit=1)
                 if len(parts) == 2:
-                    currency = parts[1]
-                    reply = get_currency_rate(currency)
+                    reply = get_currency_rate(parts[1])
                     if reply:
                         send_message(sock, nick, reply)
