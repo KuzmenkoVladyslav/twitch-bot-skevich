@@ -100,7 +100,7 @@ def ask_groq(question):
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "qwen/qwen3-32b",
+        "model": "llama-3.1-8b-instant",
         "messages": [
             {
                 "role": "system", 
@@ -113,9 +113,7 @@ def ask_groq(question):
         ],
         "max_tokens": 80,
         "temperature": 0.7,
-        "top_p": 0.9,
-        "stop": ["<think>", "<reasoning>", "Okay"],
-        "frequency_penalty": 0.5
+        "top_p": 0.9
     }
     
     try:
@@ -126,9 +124,6 @@ def ask_groq(question):
         
         data = r.json()
         answer = data['choices'][0]['message']['content'].strip()
-
-        if "<think>" in answer or "Okay" in answer or "Wait" in answer:
-                    answer = answer.split("<think>")[-1].split("Okay")[-1].split("Wait")[-1].strip()
 
         return answer
     except Exception as e:
