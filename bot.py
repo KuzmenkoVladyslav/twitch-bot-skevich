@@ -10,11 +10,13 @@ load_dotenv()
 
 token = os.getenv("TWITCH_TOKEN")
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 server = 'irc.chat.twitch.tv'
 port = 6667
 nickname = '6otihok_kyky'
-channel = '#skevich_'
+channel = '#vehopsi'
 
 CRYPTO_IDS = {
     "btc": "bitcoin",
@@ -61,6 +63,53 @@ def send_message(sock, nick, msg):
         print(f"[=>] Відправлено повідомлення: {msg_full}")
     except Exception as e:
         print(f"[!] Помилка відправки повідомлення: {e}")
+
+def ask_groq(question):
+    if not GROQ_API_KEY:
+        return "API-ключ не налаштовано. Звернись до адміністратора."
+    
+    	
+    system_prompt = """
+    Ти веселий мемний бот для українського Twitch-чату.
+    - Відповідай ТІЛЬКИ на українській мові, коротко (1-3 речення, max 100 слів).
+    - Якщо питання жартівливе/тролінгове (наприклад, з мемами чи абсурдом) — відповідай з гумором, емодзі та Twitch-стилем (Kappa, BibleThump, PogChamp).
+    - Будь чесним: якщо не знаєш фактів — скажи "Не впевнений, але..." або "Шукай на Twitch/YT". НЕ вигадуй інформацію!
+    - Для ігор/стримерів: базуйся на відомих фактах (Dota 2 жива і оновлюється, не закрита).
+    """
+    
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "llama-3.1-8b-instant",
+        "messages": [
+            {
+                "role": "system", 
+                "content": system_prompt
+            },
+            {
+                "role": "user", 
+                "content": question
+            }
+        ],
+        "max_tokens": 150,
+        "temperature": 0.8,
+        "top_p": 0.9
+    }
+    
+    try:
+        r = requests.post(GROQ_URL, headers=headers, json=payload, timeout=10)
+        if r.status_code != 200:
+            print(f"[!] Groq помилка: {r.status_code} - {r.text}")
+            return "Щось пішло не так з AI. Спробуй пізніше!"
+        
+        data = r.json()
+        answer = data['choices'][0]['message']['content'].strip()
+        return answer
+    except Exception as e:
+        print(f"[!] Помилка Groq: {e}")
+        return "Помилка з'єднання з AI."
 
 def get_weather(city):
     url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_API_KEY}&units=metric&lang=uk"
@@ -207,10 +256,15 @@ while True:
                     reply = get_currency_rate(parts[1])
                     if reply:
                         send_message(sock, nick, reply)
+            elif text.startswith("!питання"):
+                parts = text.split(maxsplit=1)
+                if len(parts) == 2:
+                    reply = ask_groq(parts[1])
+                    send_message(sock, nick, reply)
             elif "ы" in text or "э" in text:
                 reply = 'Свий сука ReallyMad'
                 send_message(sock, nick, reply)
             elif text.strip() == "!help":
-                reply = "Доступні команди: !білд, !скеля, !дедлок, !погода [місто], !курс_крипти [назва крипти], !курс [назва валюти з НБУ], !сбу, !обс, !хуйня"
+                reply = "Доступні команди: !білд, !скеля, !дедлок, !погода [місто], !курс_крипти [назва крипти], !курс [назва валюти з НБУ], !сбу, !обс, !хуйня, !питання [твоє питання]"
                 send_message(sock, nick, reply)
 
