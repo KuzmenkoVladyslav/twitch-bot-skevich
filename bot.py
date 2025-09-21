@@ -34,10 +34,21 @@ def connect_to_twitch():
             sock.send(f"PASS {token}\r\n".encode('utf-8'))
             sock.send(f"NICK {nickname}\r\n".encode('utf-8'))
             sock.send(f"JOIN {channel}\r\n".encode('utf-8'))
-            print("Успішно підключено до Twitch IRC")
-            return sock
+
+            sock.settimeout(10)
+            try:
+                resp = sock.recv(4096).decode('utf-8', errors='ignore')
+                if resp:
+                    print("Успішно підключено до Twitch IRC")
+                    sock.settimeout(None)
+                    return sock
+            except socket.timeout:
+                print("Не отримано відповідь від IRC, повторне підключення через 10 секунд")
+                sock.close()
+                time.sleep(10)
+
         except Exception as e:
-            print(f"[!] Помилка підключення: {e}. Повтор через 10 секунд")
+            print(f"Помилка підключення: {e}, повтор через 10 секунд")
             time.sleep(10)
 
 def send_message(sock, nick, msg):
