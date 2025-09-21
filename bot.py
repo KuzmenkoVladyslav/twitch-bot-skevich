@@ -15,7 +15,6 @@ server = 'irc.chat.twitch.tv'
 port = 6667
 nickname = '6otihok_kyky'
 channel = '#skevich_'
-# channel = '#hapurab_i_iiochigab'
 
 CRYPTO_IDS = {
     "btc": "bitcoin",
@@ -38,7 +37,13 @@ def connect_to_twitch():
             sock.settimeout(10)
             try:
                 resp = sock.recv(4096).decode('utf-8', errors='ignore')
+                print(f"Initial response from Twitch: {resp}")  # Add this for debugging
                 if resp:
+                    if "Login authentication failed" in resp or "Error logging in" in resp:
+                        print("Authentication failed! Check your token.")
+                        sock.close()
+                        time.sleep(10)
+                        continue
                     print("Успішно підключено до Twitch IRC")
                     sock.settimeout(None)
                     return sock
@@ -65,7 +70,8 @@ def get_weather(city):
         r = requests.get(url, timeout=5)
         data = r.json()
         if data.get("cod") != 200:
-            return f"Не вдалося знайти місто {city}"
+            print(f"Не вдалося знайти місто {city}")
+            return None
         temp = data['main']['temp']
         desc = data['weather'][0]['description']
         return f"У {city.title()} зараз {temp}°C, {desc}"
@@ -77,7 +83,8 @@ def get_crypto_rate(symbol):
     symbol = symbol.lower()
     crypto_id = CRYPTO_IDS.get(symbol)
     if not crypto_id:
-        return f"Не знайдено криптовалюту {symbol.upper()}"
+        print(f"Не знайдено криптовалюту {symbol.upper()}")
+        return None
     url = f"https://api.coingecko.com/api/v3/simple/price?ids={crypto_id}&vs_currencies=usd"
     try:
         r = requests.get(url, timeout=5)
@@ -97,7 +104,8 @@ def get_currency_rate(currency):
         for item in data:
             if item["cc"] == currency:
                 return f"Сьогодні курс {currency} = {item['rate']} грн"
-        return f"Не знайдено валюту {currency}"
+        print(f"Не знайдено валюту {currency}")
+        return None
     except Exception as e:
         print(f"[!] Помилка при отриманні курсу валют: {e}")
         return None
@@ -138,6 +146,8 @@ print("Бот запущений, чекаємо повідомлень...")
 while True:
     try:
         resp = sock.recv(4096).decode('utf-8', errors='ignore')
+        if resp:
+            print(f"Received data: {resp}")  # Add this
         if not resp:
             raise Exception("Отримано пустий пакет, перепідключення...")
     except Exception as e:
@@ -171,7 +181,7 @@ while True:
 
             # Команди
             if text.strip() == "!білд":
-                reply = "БІЛД НА ЕЛДЕН РІНГ - максимо віру 1 до 2..."
+                reply = "БІЛД НА ЕЛДЕН РІНГ - максимо віру 1 до 2, тобто, я можу мати 30 віри, тільки після цього можу качнути будь який інший стат до 15. ЗБРОЯ БУДЬ ЯКА ЩО МАЄ В СОБІ СКЕЙЛ ВІРИ. АРМОР БУДЬ ЯКИЙ"
                 send_message(sock, nick, reply)
             elif text.strip() == "!скеля":
                 send_message(sock, nick, get_skelya_size(nick))
@@ -195,3 +205,10 @@ while True:
                     reply = get_currency_rate(parts[1])
                     if reply:
                         send_message(sock, nick, reply)
+            elif "ы" in text or "э" in text:
+                reply = 'Свий сука ReallyMad'
+                send_message(sock, nick, reply)
+            elif text.strip() == "!help":
+                reply = "Доступні команди: !білд, !скеля, !дедлок, !погода [місто], !курс_крипти [назва крипти], !курс [назва валюти з НБУ]"
+                send_message(sock, nick, reply)
+
