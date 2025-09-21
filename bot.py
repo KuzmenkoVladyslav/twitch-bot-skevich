@@ -94,7 +94,7 @@ def ask_groq(question):
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "qwen/qwen3-32b",
+        "model": "llama-3.3-70b-versatile",
         "messages": [
             {
                 "role": "system", 
