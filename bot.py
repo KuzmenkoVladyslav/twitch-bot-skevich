@@ -83,7 +83,7 @@ def ask_groq(question):
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "mixtral-8x7b-32768",
+        "model": "llama-3.3-70b-versatile",
         "messages": [
             {
                 "role": "system", 
@@ -94,7 +94,7 @@ def ask_groq(question):
                 "content": question
             }
         ],
-        "max_tokens": 100,
+        "max_tokens": 80,
         "temperature": 0.7,
         "top_p": 0.9
     }
