@@ -2,6 +2,7 @@ import socket
 import requests
 import random
 import os
+import time
 
 from dotenv import load_dotenv
 
@@ -23,20 +24,30 @@ CRYPTO_IDS = {
     "ltc": "litecoin"
 }
 
-sock = socket.socket()
-sock.connect((server, port))
+# ------------------- Методи -------------------
 
-sock.send(f"PASS {token}\r\n".encode('utf-8'))
-sock.send(f"NICK {nickname}\r\n".encode('utf-8'))
-sock.send(f"JOIN {channel}\r\n".encode('utf-8'))
+def connect_to_twitch():
+    while True:
+        try:
+            sock = socket.socket()
+            sock.connect((server, port))
+            sock.send(f"PASS {token}\r\n".encode('utf-8'))
+            sock.send(f"NICK {nickname}\r\n".encode('utf-8'))
+            sock.send(f"JOIN {channel}\r\n".encode('utf-8'))
+            print("Успішно підключено до Twitch IRC")
+            return sock
+        except Exception as e:
+            print(f"Помилка підключення: {e}, повтор через 10 секунд")
+            time.sleep(10)
 
+def send_message(sock, nick, msg):
+    try:
+        msg_full = f'@{nick} {msg}'
+        sock.send(f"PRIVMSG {channel} :{msg_full}\r\n".encode('utf-8'))
+        print(f"Відправлено повідомлення: {msg_full}")
+    except Exception as e:
+        print(f"Помилка відправки повідомлення: {e}")
 
-print("Бот запущений, чекаємо повідомлень...")
-
-def send_message(nick, msg):
-    msg = f'@{nick} {msg}'
-    print(f'Message {msg} was sent')
-    sock.send(f"PRIVMSG {channel} :{msg}\r\n".encode('utf-8'))
 
 def get_weather(city):
     url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_API_KEY}&units=metric&lang=uk"
@@ -51,7 +62,8 @@ def get_weather(city):
     except Exception as e:
         print(f"Помилка при отриманні погоди: {e}")
         return None
-    
+
+
 def get_crypto_rate(symbol):
     symbol = symbol.lower()
     crypto_id = CRYPTO_IDS.get(symbol)
@@ -67,6 +79,7 @@ def get_crypto_rate(symbol):
         print(f"Помилка при отриманні курсу: {e}")
         return None
 
+
 def get_currency_rate(currency):
     url = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json"
     try:
@@ -76,18 +89,19 @@ def get_currency_rate(currency):
         for item in data:
             if item["cc"] == currency:
                 return f"Сьогодні курс {currency} = {item['rate']} грн"
-        print(f"Не знайдено валюту {currency}")
-        return None
+        return f"Не знайдено валюту {currency}"
     except Exception as e:
         print(f"Помилка при отриманні курсу: {e}")
         return None
-    
+
+
 def define_nick_rule(nick):
     nicks_dict = {
         'skevich_': 'Short',
         'fazzlk': 'Banana'
     }
     return nicks_dict.get(nick)
+
 
 def skelya_description(skelya_size):
     if skelya_size < 4:
@@ -98,58 +112,73 @@ def skelya_description(skelya_size):
         return "фазлік починає заздрити WHAT"
     else:
         return "напиши мені в інстраграмі, аккаунт skevichh NOTED"
-    
+
+
 def get_skelya_size(nick):
     rule = define_nick_rule(nick)
     text = 'розмір твоєї скелі '
     skelya_size = 0
     if not rule:
         skelya_size = random.randint(1, 20)
-        text += f'{skelya_size}'
-        text += ' см, '
-        text += skelya_description(skelya_size)
+        text += f'{skelya_size} см, {skelya_description(skelya_size)}'
     else:
         if rule == 'Short':
             skelya_size = random.randint(1, 4)
-            text += f'{skelya_size}'
-            text += ' см, '
-            text += skelya_description(skelya_size)
+            text += f'{skelya_size} см, {skelya_description(skelya_size)}'
         elif rule == 'Banana':
             text = 'уууу ааа ауаууа у 2-3  🍌  🍌  🍌 '
     return text
 
+
+# ------------------- Основний цикл -------------------
+
+sock = connect_to_twitch()
+print("Бот запущений, чекаємо повідомлень...")
+
 while True:
-    resp = sock.recv(4096).decode('utf-8', errors='ignore')
+    try:
+        resp = sock.recv(4096).decode('utf-8', errors='ignore')
+    except Exception as e:
+        print(f"Помилка recv(): {e}. Перепідключення...")
+        sock.close()
+        sock = connect_to_twitch()
+        continue
 
     for line in resp.split('\r\n'):
         if not line:
             continue
 
-        # відповідаємо на PING
+        # PING/PONG
         if line.startswith('PING'):
-            sock.send("PONG :tmi.twitch.tv\r\n".encode('utf-8'))
+            try:
+                sock.send("PONG :tmi.twitch.tv\r\n".encode('utf-8'))
+                print("Відправлено PONG")
+            except Exception as e:
+                print(f"Помилка PONG: {e}")
             continue
 
+        # Приватні повідомлення
         if "PRIVMSG" in line:
             try:
-                # текст повідомлення
                 nick = line.split("!")[0][1:]
                 text = line.split(":", 2)[2].strip()
-            except IndexError:
+                print(f"Отримано повідомлення від {nick}: {text}")
+            except Exception as e:
+                print(f"Помилка обробки повідомлення: {e}")
                 continue
 
-            # команди
+            # Команди
             if text.strip() == "!білд":
                 reply = "БІЛД НА ЕЛДЕН РІНГ - максимо віру 1 до 2, тобто, я можу мати 30 віри, тільки після цього можу качнути будь який інший стат до 15. ЗБРОЯ БУДЬ ЯКА ЩО МАЄ В СОБІ СКЕЙЛ ВІРИ. АРМОР БУДЬ ЯКИЙ"
-                send_message(nick, reply)
+                send_message(sock, nick, reply)
 
             elif text.strip() == "!скеля":
                 reply = get_skelya_size(nick)
-                send_message(nick, reply)
-                
+                send_message(sock, nick, reply)
+
             elif text.strip() == "!дедлок":
                 reply = "дедлок? ахах, я думав ця гра вже давно здохла LOLOL"
-                send_message(nick, reply)
+                send_message(sock, nick, reply)
 
             elif text.startswith("!погода"):
                 parts = text.split(maxsplit=1)
@@ -157,8 +186,7 @@ while True:
                     city = parts[1]
                     reply = get_weather(city)
                     if reply:
-                        send_message(nick, reply)
-
+                        send_message(sock, nick, reply)
 
             elif text.startswith("!курс_крипти"):
                 parts = text.split(maxsplit=1)
@@ -166,7 +194,7 @@ while True:
                     crypto = parts[1]
                     reply = get_crypto_rate(crypto)
                     if reply:
-                        send_message(nick, reply)
+                        send_message(sock, nick, reply)
 
             elif text.startswith("!курс"):
                 parts = text.split(maxsplit=1)
@@ -174,5 +202,4 @@ while True:
                     currency = parts[1]
                     reply = get_currency_rate(currency)
                     if reply:
-                        send_message(nick, reply)                      
-                
+                        send_message(sock, nick, reply)
