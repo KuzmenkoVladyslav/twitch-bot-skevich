@@ -271,7 +271,10 @@ while True:
             elif text.startswith("!питання"):
                 parts = text.split(maxsplit=1)
                 if len(parts) == 2:
-                    reply = ask_groq(parts[1])
+                    if nick == 'frostmoornx':
+                        reply = 'Довбойоб іди нахуй'
+                    else:
+                        reply = ask_groq(parts[1])
                     send_message(sock, nick, reply)
             elif "ы" in text or "э" in text:
                 reply = 'Свий сука ReallyMad'
