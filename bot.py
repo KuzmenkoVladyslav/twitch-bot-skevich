@@ -18,7 +18,7 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 server = 'irc.chat.twitch.tv'
 port = 6667
 nickname = '6otihok_kyky'
-channel = '#hapurab_i_iiochigab'
+channel = '#skevich_'
 
 CRYPTO_IDS = {
     "btc": "bitcoin",
