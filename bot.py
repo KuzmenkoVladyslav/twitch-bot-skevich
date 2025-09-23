@@ -70,7 +70,7 @@ def send_message(sock, nick, msg):
 
 def add_dobvoyob(nick):
     if nick not in dobvoyobs:
-        dobvoyobs.append(nick)
+        dobvoyobs.append(nick.lower())
         print(f"Додано {nick} до списку довбойобів")
 
 def ask_gemini(question):
@@ -288,4 +288,6 @@ while True:
                 reply = "Доступні команди: !білд, !скеля, !дедлок, !погода [місто], !курс_крипти [назва крипти], !курс [назва валюти з НБУ], !сбу, !обс, !хуйня, !питання [твоє питання], !марвел, !наві"
                 send_message(sock, nick, reply)
             elif text.startswith("!idi") and nick == 'hapurab_i_iiochigab':
-                add_dobvoyob(parts[1].strip())
+                parts = text.split(maxsplit=1)
+                if len(parts) == 2:
+                    add_dobvoyob(parts[1].strip())
