@@ -13,7 +13,9 @@ load_dotenv()
 
 token = os.getenv("TWITCH_TOKEN")
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY_FIRST = os.getenv("GEMINI_API_KEY_FIRST")
+GEMINI_API_KEY_SECOND = os.getenv("GEMINI_API_KEY_SECOND")
+GEMINI_API_KEY_THIRD = os.getenv("GEMINI_API_KEY_THIRD")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 server = 'irc.chat.twitch.tv'
@@ -78,13 +80,13 @@ def add_dobvoyob(nick):
         dobvoyobs.append(nick.lower())
         print(f"Додано {nick} до списку довбойобів")
 
-def ask_gemini(question, nick):
-    if not GEMINI_API_KEY:
+def ask_gemini(question, nick, api_key, key_order):
+    if not api_key:
         return "API-ключ Gemini не налаштовано"
     if not question.strip():
         return "Питання не може бути порожнім"
     
-    genai.configure(api_key=GEMINI_API_KEY)
+    genai.configure(api_key=api_key)
 
     # Перевірка на частоту запитів
     current_time = time.time()
@@ -131,8 +133,13 @@ def ask_gemini(question, nick):
         user_last_question_time[nick] = current_time
         return answer
     except ResourceExhausted as e:
-        print(f"Перевищено ліміт Gemini API: {e}")
-        return "Ліміт запитів до AI вичерпано на сьогодні. Спробуй завтра!"
+        print(f"Перевищено ліміт Gemini API для {key_order}: {e}")
+        if key_order == 'first':
+            return ask_gemini(question, nick, GEMINI_API_KEY_SECOND, 'second')
+        elif key_order == 'second':
+            return ask_gemini(question, nick, GEMINI_API_KEY_THIRD, 'third')
+        else:
+            return "Ліміт запитів до AI вичерпано на сьогодні. Спробуй завтра!"
     except Exception as e:
         print(f"Помилка Gemini: {e}")
         return "Помилка з'єднання з AI. Спробуй пізніше!"
@@ -295,7 +302,7 @@ while True:
                     elif nick in dobvoyobs:
                         reply = 'idi'
                     else:
-                        reply = ask_gemini(parts[1], nick)
+                        reply = ask_gemini(parts[1], nick, GEMINI_API_KEY_FIRST, 'first')
                     send_message(sock, nick, reply)
             elif "ы" in text or "э" in text:
                 reply = 'Свий сука ReallyMad'
