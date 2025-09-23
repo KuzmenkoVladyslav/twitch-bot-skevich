@@ -11,7 +11,6 @@ load_dotenv()
 
 token = os.getenv("TWITCH_TOKEN")
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
@@ -115,65 +114,6 @@ def ask_gemini(question):
         
     except Exception as e:
         print(f"[!] Помилка Gemini: {e}")
-        return "Помилка з'єднання з AI."
-
-def ask_groq(question):
-    if not GROQ_API_KEY:
-        print("API-ключ не налаштовано. Звернись до адміністратора.")
-        return None
-    
-    system_prompt = """
-        Ти веселий мемний бот для українського Twitch-чату. 
-
-        КРИТИЧНО ВАЖЛИВО:
-        - НЕ генеруй <think>, <reasoning>, або будь-які проміжні думки. 
-        - НЕ використовуй англійську мову для роздумів.
-        - ВІДПОВІДАЙ ТІЛЬКИ ФІНАЛЬНИМ ТЕКСТОМ на українській мові.
-        - НЕ пиши "Okay", "Wait", "First" або будь-які роздуми — одразу до суті!
-
-        ПРАВИЛА:
-        - Відповідай ТІЛЬКИ на українській мові, коротко (1-2 речення, max 80 слів).
-        - Використовуй правильну українську граматику, природний розмовний стиль.
-        - Генеруй УНІКАЛЬНІ відповіді — не копіюй приклади дослівно, додавай варіації та гумор.
-        - Уважно перевіряй факти, не вигадуй їх.
-        - Якщо у питанні є невідомий тобі термін, то спробуй пошукати його варіацію, що написана транслітом. Наприклад, "deadlock" замість "дедлок" або "Skevich" замість "Скевіч".
-
-        Якщо не знаєш — "Ця людина нажаль мені не відома, бо я погано навчена модель".
-        """
-    
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": "llama-3.1-8b-instant",
-        "messages": [
-            {
-                "role": "system", 
-                "content": system_prompt
-            },
-            {
-                "role": "user", 
-                "content": question
-            }
-        ],
-        "max_tokens": 80,
-        "temperature": 0.7,
-        "top_p": 0.9
-    }
-    
-    try:
-        r = requests.post(GROQ_URL, headers=headers, json=payload, timeout=10)
-        if r.status_code != 200:
-            print(f"[!] Groq помилка: {r.status_code} - {r.text}")
-            return "Щось пішло не так з AI. Спробуй пізніше!"
-        
-        data = r.json()
-        answer = data['choices'][0]['message']['content'].strip()
-
-        return answer
-    except Exception as e:
-        print(f"[!] Помилка Groq: {e}")
         return "Помилка з'єднання з AI."
 
 def get_weather(city):
