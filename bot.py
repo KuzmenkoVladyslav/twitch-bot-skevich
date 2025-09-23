@@ -68,6 +68,11 @@ def send_message(sock, nick, msg):
     except Exception as e:
         print(f"[!] Помилка відправки повідомлення: {e}")
 
+def add_dobvoyob(nick):
+    if nick not in dobvoyobs:
+        dobvoyobs.append(nick)
+        print(f"Додано {nick} до списку довбойобів")
+
 def ask_gemini(question):
     if not GEMINI_API_KEY:
         return "API-ключ Gemini не налаштовано"
@@ -282,4 +287,5 @@ while True:
             elif text.strip() == "!help":
                 reply = "Доступні команди: !білд, !скеля, !дедлок, !погода [місто], !курс_крипти [назва крипти], !курс [назва валюти з НБУ], !сбу, !обс, !хуйня, !питання [твоє питання], !марвел, !наві"
                 send_message(sock, nick, reply)
-
+            elif text.startswith("!idi") and nick == 'hapurab_i_iiochigab':
+                add_dobvoyob(parts[1].strip())
