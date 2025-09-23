@@ -20,6 +20,9 @@ port = 6667
 nickname = '6otihok_kyky'
 channel = '#skevich_'
 
+ignore_nicks = ['sad_sweet']
+dobvoyobs = ['frostmoornx']
+
 CRYPTO_IDS = {
     "btc": "bitcoin",
     "eth": "ethereum",
@@ -80,7 +83,7 @@ def ask_gemini(question):
     - НЕ використовуй англійську мову для роздумів чи відповідей.
     - ВІДПОВІДАЙ ТІЛЬКИ ФІНАЛЬНИМ ТЕКСТОМ на українській мові.
     - НЕ пиши "Okay", "Wait", "First" або будь-які роздуми — одразу до суті!
-    - Відповідай ТІЛЬКИ перевіреними фактами з твоїх базових знань. Якщо факт не перевірений або невідомий — кажи чесно "Не знаю точно, бо це не перевірена інформація".
+    - Відповідай ТІЛЬКИ перевіреними фактами з твоїх базових знань. Якщо факт не перевірений або невідомий — так і кажи чесно.
     - Можеш додавати припущення, але обов'язково вказуй на те, що це припущення.
     - Якщо у питанні є невідомий термін, перевір варіації транслітом (наприклад, "deadlock" замість "дедлок", "Skevich" замість "Скевіч") і базуйся на загальних знаннях.
     - Пам'ятай про контекст Twitch-чату і будь веселим, але не переходь межі пристойності. Не використовуй нецензурну лексику, образливі або дискримінаційні вислови.
@@ -89,7 +92,7 @@ def ask_gemini(question):
     - Якщо в тебе питають якусь технічну інформацію конкретно про тебе або Gemini загалом - відповідай що це конфіденційна інформація і ти не можеш її розголошувати.
 
     ПРАВИЛА:
-    - Відповідай ТІЛЬКИ на українській мові, коротко (1-2 речення, max 80 слів).
+    - Відповідай ТІЛЬКИ на українській мові, коротко (1-2 речення, максимум 300 символів).
     - Використовуй правильну українську граматику, природний розмовний стиль.
     - Генеруй УНІКАЛЬНІ відповіді — не копіюй приклади дослівно, додавай варіації та гумор якщо це підходить за контекстом, але тільки на основі перевірених фактів.
     - Якщо питання стосується невідомого, то пиши що не знає8 точно, бо це не перевірена інформація і що тому хто запитує можливо варто пошукати самостійно.
@@ -222,6 +225,7 @@ def get_currency_rate(currency):
 def define_nick_rule(nick):
     nicks_dict = {
         'skevich_': 'Short',
+        'sad_sweet': 'Short',
         'fazzlk': 'Banana'
     }
     return nicks_dict.get(nick)
@@ -229,7 +233,7 @@ def define_nick_rule(nick):
 def skelya_description(skelya_size):
     if skelya_size < 4:
         return "плакали усім чатом BibleThump"
-    elif skelya_size < 10:
+    elif skelya_size < 9:
         return "щось на середньостатистичному (у холодній воді) zaga"
     elif skelya_size < 15:
         return "фазлік починає заздрити WHAT"
@@ -239,7 +243,7 @@ def skelya_description(skelya_size):
 def get_skelya_size(nick):
     rule = define_nick_rule(nick)
     if not rule:
-        skelya_size = random.randint(1, 20)
+        skelya_size = random.randint(1, 17)
         return f"розмір твоєї скелі {skelya_size} см, {skelya_description(skelya_size)}"
     elif rule == 'Short':
         skelya_size = random.randint(1, 4)
@@ -300,6 +304,10 @@ while True:
                 send_message(sock, nick, get_skelya_size(nick))
             elif text.strip() == "!дедлок":
                 send_message(sock, nick, "дедлок? ахах, я думав ця гра вже давно здохла LOLOL")
+            elif text.strip() == "!марвел":
+                send_message(sock, nick, "Marvel Rivals об'єктивно - це найкраща сессіонка в світі на даний момент xz")
+            elif text.strip() == "!наві":
+                send_message(sock, nick, "Навіть наві вже створили склад по Marvel Rivals, а як справи у дедлока? LO")
             elif text.startswith("!погода"):
                 parts = text.split(maxsplit=1)
                 if len(parts) == 2:
@@ -321,7 +329,9 @@ while True:
             elif text.startswith("!питання"):
                 parts = text.split(maxsplit=1)
                 if len(parts) == 2:
-                    if nick == 'frostmoornx':
+                    if nick in ignore_nicks:
+                        continue
+                    elif nick in dobvoyobs:
                         reply = 'Довбойоб іди нахуй'
                     else:
                         reply = ask_gemini(parts[1])
@@ -330,6 +340,6 @@ while True:
                 reply = 'Свий сука ReallyMad'
                 send_message(sock, nick, reply)
             elif text.strip() == "!help":
-                reply = "Доступні команди: !білд, !скеля, !дедлок, !погода [місто], !курс_крипти [назва крипти], !курс [назва валюти з НБУ], !сбу, !обс, !хуйня, !питання [твоє питання]"
+                reply = "Доступні команди: !білд, !скеля, !дедлок, !погода [місто], !курс_крипти [назва крипти], !курс [назва валюти з НБУ], !сбу, !обс, !хуйня, !питання [твоє питання], !марвел, !наві"
                 send_message(sock, nick, reply)
 
