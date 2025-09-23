@@ -247,7 +247,7 @@ while True:
             elif text.strip() == "!марвел":
                 send_message(sock, nick, "Marvel Rivals об'єктивно - це найкраща сессіонка в світі на даний момент xz")
             elif text.strip() == "!наві":
-                send_message(sock, nick, "Навіть наві вже створили склад по Marvel Rivals, а як справи у дедлока? LO")
+                send_message(sock, nick, "навіть наві вже створили склад по Marvel Rivals, а як справи у дедлока? LO")
             elif text.startswith("!погода"):
                 parts = text.split(maxsplit=1)
                 if len(parts) == 2:
