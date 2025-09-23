@@ -93,7 +93,8 @@ def ask_gemini(question, nick, api_key, key_order):
     # Перевірка на частоту запитів
     current_time = time.time()
     if current_time - user_last_question_time[nick] < QUESTION_COOLDOWN:
-        return f"Зачекай {int(QUESTION_COOLDOWN - (current_time - user_last_question_time[nick]))} сек перед наступним питанням!"
+        # return f"Зачекай {int(QUESTION_COOLDOWN - (current_time - user_last_question_time[nick]))} сек перед наступним питанням!"
+        return None  # Ігноруємо питання, якщо воно надто часте
 
     system_prompt = """
     Ти веселий мемний бот для українського Twitch-чату. 
