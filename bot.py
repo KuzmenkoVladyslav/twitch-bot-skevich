@@ -41,7 +41,7 @@ def connect_to_twitch():
             sock.settimeout(10)
             try:
                 resp = sock.recv(4096).decode('utf-8', errors='ignore')
-                print(f"Initial response from Twitch: {resp}")  # Add this for debugging
+                # print(f"Initial response from Twitch: {resp}")
                 if resp:
                     if "Login authentication failed" in resp or "Error logging in" in resp:
                         print("Authentication failed! Check your token.")
@@ -64,7 +64,7 @@ def send_message(sock, nick, msg):
     try:
         msg_full = f"@{nick} {msg}"
         sock.send(f"PRIVMSG {channel} :{msg_full}\r\n".encode('utf-8'))
-        print(f"[=>] Відправлено повідомлення: {msg_full}")
+        # print(f"[=>] Відправлено повідомлення: {msg_full}")
     except Exception as e:
         print(f"[!] Помилка відправки повідомлення: {e}")
 
