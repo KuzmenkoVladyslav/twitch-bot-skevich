@@ -3,44 +3,24 @@ import requests
 import random
 import os
 import time
-import logging
 import google.generativeai as genai
 
 from dotenv import load_dotenv
 
-# Налаштування логування
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[
-        logging.FileHandler('twitch_bot.log'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
-
-# Завантаження змінних оточення
 load_dotenv()
-TWITCH_TOKEN = os.getenv("TWITCH_TOKEN")
+
+token = os.getenv("TWITCH_TOKEN")
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# Конфігурація Gemini
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-else:
-    logger.warning("GEMINI_API_KEY не настроен")
+server = 'irc.chat.twitch.tv'
+port = 6667
+nickname = '6otihok_kyky'
+channel = '#skevich_'
 
-# Конфігурація Twitch IRC
-SERVER = 'irc.chat.twitch.tv'
-PORT = 6667
-NICKNAME = '6otihok_kyky'
-CHANNEL = '#skevich_'
-SOCKET_TIMEOUT = 60*5  # 5 хвилин
-
-IGNORE_NICKS = ['sad_sweet']
-DOBVOYOBS = ['frostmoornx']
+ignore_nicks = ['sad_sweet']
+dobvoyobs = ['frostmoornx']
 
 CRYPTO_IDS = {
     "btc": "bitcoin",
@@ -50,52 +30,50 @@ CRYPTO_IDS = {
 }
 
 def connect_to_twitch():
-    attempt = 1
     while True:
         try:
             sock = socket.socket()
-            sock.settimeout(SOCKET_TIMEOUT)
-            sock.connect((SERVER, PORT))
-            sock.send(f"PASS {TWITCH_TOKEN}\r\n".encode('utf-8'))
-            sock.send(f"NICK {NICKNAME}\r\n".encode('utf-8'))
-            sock.send(f"JOIN {CHANNEL}\r\n".encode('utf-8'))
+            sock.connect((server, port))
+            sock.send(f"PASS {token}\r\n".encode('utf-8'))
+            sock.send(f"NICK {nickname}\r\n".encode('utf-8'))
+            sock.send(f"JOIN {channel}\r\n".encode('utf-8'))
 
+            sock.settimeout(10)
             try:
-                resp = sock.recv(4096).decode('utf-8')
-                logger.info(f"Initial response from Twitch: {resp}")
+                resp = sock.recv(4096).decode('utf-8', errors='ignore')
+                print(f"Initial response from Twitch: {resp}")  # Add this for debugging
                 if resp:
                     if "Login authentication failed" in resp or "Error logging in" in resp:
-                        logger.error("Authentication failed! Check your token.")
+                        print("Authentication failed! Check your token.")
                         sock.close()
-                        time.sleep(min(10 * attempt, 300))
-                        attempt += 1
+                        time.sleep(10)
                         continue
-                    logger.info("Успішно підключено до Twitch IRC")
+                    print("Успішно підключено до Twitch IRC")
+                    sock.settimeout(None)
                     return sock
             except socket.timeout:
-                logger.warning("Не отримано відповідь від IRC, повторне підключення")
+                print("Не отримано відповідь від IRC, повторне підключення через 10 секунд")
                 sock.close()
-                time.sleep(min(10 * attempt, 300))
-                attempt += 1
+                time.sleep(10)
 
         except Exception as e:
-            logger.error(f"Помилка підключення: {e}, повтор через {min(10 * attempt, 300)} сек")
-            sock.close()
-            time.sleep(min(10 * attempt, 300))
-            attempt += 1
+            print(f"Помилка підключення: {e}, повтор через 10 секунд")
+            time.sleep(10)
 
 def send_message(sock, nick, msg):
     try:
         msg_full = f"@{nick} {msg}"
-        sock.send(f"PRIVMSG {CHANNEL} :{msg_full}\r\n".encode('utf-8'))
-        logger.info(f"Відправлено повідомлення: {msg_full}")
+        sock.send(f"PRIVMSG {channel} :{msg_full}\r\n".encode('utf-8'))
+        print(f"[=>] Відправлено повідомлення: {msg_full}")
     except Exception as e:
-        logger.error(f"Помилка відправки повідомлення: {e}")
+        print(f"[!] Помилка відправки повідомлення: {e}")
 
 def ask_gemini(question):
     if not GEMINI_API_KEY:
         return "API-ключ Gemini не налаштовано"
     
+    genai.configure(api_key=GEMINI_API_KEY)
+
     system_prompt = """
     Ти веселий мемний бот для українського Twitch-чату. 
 
@@ -130,9 +108,12 @@ def ask_gemini(question):
                 "stop_sequences": ["<think>", "<reasoning>", "Okay", "Wait"]
             }
         )
-        return response.text.strip()
+        
+        answer = response.text.strip() 
+        return answer
+        
     except Exception as e:
-        logger.error(f"Помилка Gemini: {e}")
+        print(f"[!] Помилка Gemini: {e}")
         return "Помилка з'єднання з AI."
 
 def get_weather(city):
@@ -141,20 +122,20 @@ def get_weather(city):
         r = requests.get(url, timeout=5)
         data = r.json()
         if data.get("cod") != 200:
-            logger.warning(f"Не вдалося знайти місто {city}")
+            print(f"Не вдалося знайти місто {city}")
             return None
         temp = data['main']['temp']
         desc = data['weather'][0]['description']
         return f"У {city.title()} зараз {temp}°C, {desc}"
     except Exception as e:
-        logger.error(f"Помилка при отриманні погоди: {e}")
+        print(f"[!] Помилка при отриманні погоди: {e}")
         return None
 
 def get_crypto_rate(symbol):
     symbol = symbol.lower()
     crypto_id = CRYPTO_IDS.get(symbol)
     if not crypto_id:
-        logger.warning(f"Не знайдено криптовалюту {symbol.upper()}")
+        print(f"Не знайдено криптовалюту {symbol.upper()}")
         return None
     url = f"https://api.coingecko.com/api/v3/simple/price?ids={crypto_id}&vs_currencies=usd"
     try:
@@ -163,7 +144,7 @@ def get_crypto_rate(symbol):
         price = data[crypto_id]['usd']
         return f"Курс {symbol.upper()} зараз {price} $"
     except Exception as e:
-        logger.error(f"Помилка при отриманні курсу крипти: {e}")
+        print(f"[!] Помилка при отриманні курсу крипти: {e}")
         return None
 
 def get_currency_rate(currency):
@@ -175,10 +156,10 @@ def get_currency_rate(currency):
         for item in data:
             if item["cc"] == currency:
                 return f"Сьогодні курс {currency} = {item['rate']} грн"
-        logger.warning(f"Не знайдено валюту {currency}")
+        print(f"Не знайдено валюту {currency}")
         return None
     except Exception as e:
-        logger.error(f"Помилка при отриманні курсу валют: {e}")
+        print(f"[!] Помилка при отриманні курсу валют: {e}")
         return None
 
 def define_nick_rule(nick):
@@ -210,80 +191,95 @@ def get_skelya_size(nick):
     elif rule == 'Banana':
         return 'уууу ааа ауаууа у 2-3  🍌  🍌  🍌 '
 
-# Словарь команд
-COMMANDS = {
-    "!білд": lambda nick, args: "БІЛД НА ЕЛДЕН РІНГ - максимо віру 1 до 2, тобто, я можу мати 30 віри, тільки після цього можу качнути будь який інший стат до 15. ЗБРОЯ БУДЬ ЯКА ЩО МАЄ В СОБІ СКЕЙЛ ВІРИ. АРМОР БУДЬ ЯКИЙ",
-    "!сбу": lambda nick, args: "Шановний Малюк Василь Васильович! Хочу повідомити, що я не маю жодного відношення до цього каналу. Я випадково потрапив сюди, нічого не поширював, нічого не завантажував, не лайкав і не репостив. Мене підставили. Прошу врахувати це під час досудового слідства. Слава Україні!",
-    "!обс": lambda nick, args: "Підкажи як правильно працювати з ОБС, чи можеш продемонструвати функцію закінчити трансляцію?",
-    "!хуйня": lambda nick, args: "почитав чат, дякую, зайду пізніше, місяці через 2",
-    "!скеля": lambda nick, args: get_skelya_size(nick),
-    "!дедлок": lambda nick, args: "дедлок? ахах, я думав ця гра вже давно здохла LOLOL",
-    "!марвел": lambda nick, args: "Marvel Rivals об'єктивно - це найкраща сессіонка в світі на даний момент xz",
-    "!наві": lambda nick, args: "навіть наві вже створили склад по Marvel Rivals, а як справи у дедлока? LO",
-    "!погода": lambda nick, args: get_weather(args[0]) if args else "Вкажіть місто: !погода [місто]",
-    "!курс_крипти": lambda nick, args: get_crypto_rate(args[0]) if args else "Вкажіть криптовалюту: !курс_крипти [назва]",
-    "!курс": lambda nick, args: get_currency_rate(args[0]) if args else "Вкажіть валюту: !курс [назва]",
-    "!питання": lambda nick, args: "idi" if nick in DOBVOYOBS else (ask_gemini(args[0]) if args and nick not in IGNORE_NICKS else "Вкажіть питання: !питання [текст]"),
-    "!help": lambda nick, args: f"Доступні команди: {', '.join(COMMANDS.keys())}"
-}
+sock = connect_to_twitch()
+print("Бот запущений, чекаємо повідомлень...")
 
-def main():
-    sock = connect_to_twitch()
-    logger.info("Бот запущений, чекаємо повідомлень...")
-
-    while True:
-        try:
-            resp = sock.recv(4096).decode('utf-8')
-            if resp:
-                logger.info(f"Received data: {resp}")
-            if not resp:
-                raise Exception("Отримано пустий пакет, перепідключення...")
-
-            for line in resp.split('\r\n'):
-                if not line:
-                    continue
-
-                if line.startswith('PING'):
-                    try:
-                        sock.send("PONG :tmi.twitch.tv\r\n".encode('utf-8'))
-                        logger.info("Відправлено PONG")
-                    except Exception as e:
-                        logger.error(f"Помилка PONG: {e}")
-                    continue
-
-                if "PRIVMSG" in line:
-                    try:
-                        nick = line.split("!")[0][1:]
-                        text = line.split(":", 2)[2].strip()
-                        logger.info(f"Отримано повідомлення від {nick}: {text}")
-                        
-                        parts = text.split(maxsplit=1)
-                        cmd = parts[0]
-                        args = parts[1].split() if len(parts) > 1 else []
-                        
-                        if cmd in COMMANDS:
-                            reply = COMMANDS[cmd](nick, args)
-                            if reply:
-                                send_message(sock, nick, reply)
-                    except Exception as e:
-                        logger.error(f"Помилка обробки повідомлення: {e}")
-                        continue
-
-        except UnicodeDecodeError as e:
-            logger.error(f"Помилка декодування UTF-8: {e}")
-            continue
-        except Exception as e:
-            logger.error(f"Помилка recv(): {e}")
-            sock.close()
-            sock = connect_to_twitch()
-            continue
-
-if __name__ == "__main__":
+while True:
     try:
-        main()
-    except KeyboardInterrupt:
-        logger.info("Завершення роботи бота")
-        sock = globals().get('sock')
-        if sock:
-            sock.close()
-        exit(0)
+        resp = sock.recv(4096).decode('utf-8', errors='ignore')
+        if resp:
+            print(f"Received data: {resp}")
+        if not resp:
+            raise Exception("Отримано пустий пакет, перепідключення...")
+    except Exception as e:
+        print(f"[!] Помилка recv(): {e}")
+        sock.close()
+        sock = connect_to_twitch()
+        continue
+
+    for line in resp.split('\r\n'):
+        if not line:
+            continue
+
+        if line.startswith('PING'):
+            try:
+                sock.send("PONG :tmi.twitch.tv\r\n".encode('utf-8'))
+                print("[<=>] Відправлено PONG")
+            except Exception as e:
+                print(f"[!] Помилка PONG: {e}")
+            continue
+
+        if "PRIVMSG" in line:
+            try:
+                nick = line.split("!")[0][1:]
+                text = line.split(":", 2)[2].strip()
+                print(f"[<=] Отримано повідомлення від {nick}: {text}")
+            except Exception as e:
+                print(f"[!] Помилка обробки повідомлення: {e}")
+                continue
+
+            if text.strip() == "!білд":
+                reply = "БІЛД НА ЕЛДЕН РІНГ - максимо віру 1 до 2, тобто, я можу мати 30 віри, тільки після цього можу качнути будь який інший стат до 15. ЗБРОЯ БУДЬ ЯКА ЩО МАЄ В СОБІ СКЕЙЛ ВІРИ. АРМОР БУДЬ ЯКИЙ"
+                send_message(sock, nick, reply)
+            elif text.strip() == "!сбу" or text.strip() == "!СБУ":
+                reply = "Шановний Малюк Василь Васильович! Хочу повідомити, що я не маю жодного відношення до цього каналу. Я випадково потрапив сюди, нічого не поширював, нічого не завантажував, не лайкав і не репостив. Мене підставили. Прошу врахувати це під час досудового слідства. Слава Україні!"
+                send_message(sock, nick, reply)
+            elif text.strip() == "!обс":
+                reply = "Підкажи як правильно працювати з ОБС, чи можеш продемонструвати функцію закінчити трансляцію?"
+                send_message(sock, nick, reply)
+            elif text.strip() == "!хуйня":
+                reply = "почитав чат, дякую, зайду пізніше, місяці через 2"
+                send_message(sock, nick, reply)
+            elif text.strip() == "!скеля":
+                send_message(sock, nick, get_skelya_size(nick))
+            elif text.strip() == "!дедлок":
+                send_message(sock, nick, "дедлок? ахах, я думав ця гра вже давно здохла LOLOL")
+            elif text.strip() == "!марвел":
+                send_message(sock, nick, "Marvel Rivals об'єктивно - це найкраща сессіонка в світі на даний момент xz")
+            elif text.strip() == "!наві":
+                send_message(sock, nick, "навіть наві вже створили склад по Marvel Rivals, а як справи у дедлока? LO")
+            elif text.startswith("!погода"):
+                parts = text.split(maxsplit=1)
+                if len(parts) == 2:
+                    reply = get_weather(parts[1])
+                    if reply:
+                        send_message(sock, nick, reply)
+            elif text.startswith("!курс_крипти"):
+                parts = text.split(maxsplit=1)
+                if len(parts) == 2:
+                    reply = get_crypto_rate(parts[1])
+                    if reply:
+                        send_message(sock, nick, reply)
+            elif text.startswith("!курс"):
+                parts = text.split(maxsplit=1)
+                if len(parts) == 2:
+                    reply = get_currency_rate(parts[1])
+                    if reply:
+                        send_message(sock, nick, reply)
+            elif text.startswith("!питання"):
+                parts = text.split(maxsplit=1)
+                if len(parts) == 2:
+                    if nick in ignore_nicks:
+                        continue
+                    elif nick in dobvoyobs:
+                        reply = 'idi'
+                    else:
+                        reply = ask_gemini(parts[1])
+                    send_message(sock, nick, reply)
+            elif "ы" in text or "э" in text:
+                reply = 'Свий сука ReallyMad'
+                send_message(sock, nick, reply)
+            elif text.strip() == "!help":
+                reply = "Доступні команди: !білд, !скеля, !дедлок, !погода [місто], !курс_крипти [назва крипти], !курс [назва валюти з НБУ], !сбу, !обс, !хуйня, !питання [твоє питання], !марвел, !наві"
+                send_message(sock, nick, reply)
+
