@@ -33,6 +33,8 @@ CRYPTO_IDS = {
     "ltc": "litecoin"
 }
 
+is_gpt_disabled = False
+
 QUESTION_COOLDOWN = 90  # секунд
 user_last_question_time = defaultdict(float)
 
@@ -296,6 +298,8 @@ while True:
                     if reply:
                         send_message(sock, nick, reply)
             elif text.startswith("!питання"):
+                if is_gpt_disabled:
+                    continue
                 parts = text.split(maxsplit=1)
                 if len(parts) == 2:
                     if nick in ignore_nicks:
@@ -315,3 +319,11 @@ while True:
                 parts = text.split(maxsplit=1)
                 if len(parts) == 2:
                     add_dobvoyob(parts[1].strip())
+            elif text.startswith("!switch_gpt") and nick == 'hapurab_i_iiochigab':
+                if is_gpt_disabled:
+                    is_gpt_disabled = False
+                    reply = "GPT знову увімкнено"
+                else:
+                    is_gpt_disabled = True
+                    reply = "GPT вимкнено, тепер бот не відповідатиме на питання"
+                send_message(sock, nick, reply)
