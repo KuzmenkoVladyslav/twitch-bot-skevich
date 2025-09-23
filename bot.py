@@ -228,7 +228,7 @@ while True:
             try:
                 nick = line.split("!")[0][1:]
                 text = line.split(":", 2)[2].strip()
-                print(f"[<=] Отримано повідомлення від {nick}: {text}")
+                # print(f"[<=] Отримано повідомлення від {nick}: {text}")
             except Exception as e:
                 print(f"[!] Помилка обробки повідомлення: {e}")
                 continue
