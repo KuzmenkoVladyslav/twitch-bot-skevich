@@ -104,7 +104,7 @@ def ask_gemini(question):
             [system_prompt, question],
             generation_config={
                 "max_output_tokens": 80,
-                "temperature": 0.7,
+                "temperature": 0.8,
                 "top_p": 0.9,
                 "stop_sequences": ["<think>", "<reasoning>", "Okay", "Wait"]
             }
