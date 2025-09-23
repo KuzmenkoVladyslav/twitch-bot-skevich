@@ -23,7 +23,7 @@ port = 6667
 nickname = '6otihok_kyky'
 channel = '#skevich_'
 
-ignore_nicks = ['sad_sweet']
+ignore_nicks = ['sad_sweet', 'alloy_13']
 dobvoyobs = ['frostmoornx']
 
 CRYPTO_IDS = {
