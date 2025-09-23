@@ -5,7 +5,9 @@ import os
 import time
 import google.generativeai as genai
 
+from collections import defaultdict
 from dotenv import load_dotenv
+from google.api_core.exceptions import ResourceExhausted
 
 load_dotenv()
 
@@ -28,6 +30,9 @@ CRYPTO_IDS = {
     "doge": "dogecoin",
     "ltc": "litecoin"
 }
+
+QUESTION_COOLDOWN = 90  # секунд
+user_last_question_time = defaultdict(float)
 
 def connect_to_twitch():
     while True:
@@ -73,11 +78,18 @@ def add_dobvoyob(nick):
         dobvoyobs.append(nick.lower())
         print(f"Додано {nick} до списку довбойобів")
 
-def ask_gemini(question):
+def ask_gemini(question, nick):
     if not GEMINI_API_KEY:
         return "API-ключ Gemini не налаштовано"
+    if not question.strip():
+        return "Питання не може бути порожнім"
     
     genai.configure(api_key=GEMINI_API_KEY)
+
+    # Перевірка на частоту запитів
+    current_time = time.time()
+    if current_time - user_last_question_time[nick] < QUESTION_COOLDOWN:
+        return f"Зачекай {int(QUESTION_COOLDOWN - (current_time - user_last_question_time[nick]))} сек перед наступним питанням!"
 
     system_prompt = """
     Ти веселий мемний бот для українського Twitch-чату. 
@@ -103,6 +115,7 @@ def ask_gemini(question):
     """
     
     try:
+        print(f"Запит до Gemini: {question}")
         model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(
             [system_prompt, question],
@@ -113,13 +126,16 @@ def ask_gemini(question):
                 "stop_sequences": ["<think>", "<reasoning>", "Okay", "Wait"]
             }
         )
-        
-        answer = response.text.strip() 
+        answer = response.text.strip()
+        print(f"Відповідь від Gemini: {answer}")
+        user_last_question_time[nick] = current_time
         return answer
-        
+    except ResourceExhausted as e:
+        print(f"Перевищено ліміт Gemini API: {e}")
+        return "Ліміт запитів до AI вичерпано на сьогодні. Спробуй завтра!"
     except Exception as e:
-        print(f"[!] Помилка Gemini: {e}")
-        return "Помилка з'єднання з AI."
+        print(f"Помилка Gemini: {e}")
+        return "Помилка з'єднання з AI. Спробуй пізніше!"
 
 def get_weather(city):
     url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_API_KEY}&units=metric&lang=uk"
@@ -279,7 +295,7 @@ while True:
                     elif nick in dobvoyobs:
                         reply = 'idi'
                     else:
-                        reply = ask_gemini(parts[1])
+                        reply = ask_gemini(parts[1], nick)
                     send_message(sock, nick, reply)
             elif "ы" in text or "э" in text:
                 reply = 'Свий сука ReallyMad'
