@@ -202,8 +202,8 @@ print("Бот запущений, чекаємо повідомлень...")
 while True:
     try:
         resp = sock.recv(4096).decode('utf-8', errors='ignore')
-        if resp:
-            print(f"Received data: {resp}")
+        # if resp:
+        #     print(f"Received data: {resp}")
         if not resp:
             raise Exception("Отримано пустий пакет, перепідключення...")
     except Exception as e:
